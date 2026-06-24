@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Placify</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar"></nav>
+    <div class="page-wrapper">
+        <main class="main-content">
+            <div class="container">
+                <div class="section-header">
+                    <h1 id="greeting">Welcome back!</h1>
+                    <p>Here's an overview of your placement readiness.</p>
+                </div>
+
+                <div class="stats-grid" id="statsGrid"></div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📄 Your Resume</div>
+                            <div class="card-subtitle">Latest uploaded resume</div>
+                        </div>
+                        <div id="resumeSection">
+                            <div class="empty-state">
+                                <div class="empty-icon">📄</div>
+                                <h3>No resume uploaded</h3>
+                                <p>Upload your resume to get started</p>
+                                <a href="upload.html" class="btn btn-primary">Upload Resume</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🎯 Detected Skills</div>
+                            <div class="card-subtitle">Skills found in your resume</div>
+                        </div>
+                        <div id="skillsSection">
+                            <div class="empty-state">
+                                <p>Upload a resume to detect skills</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <div class="card-title">📊 Recent Analysis Reports</div>
+                        <div class="card-subtitle">Your latest skill gap analysis results</div>
+                    </div>
+                    <div id="reportsSection">
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <h3>No analyses yet</h3>
+                            <p>Run a skill gap analysis to see results here</p>
+                            <a href="analysis.html" class="btn btn-primary">Start Analysis</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script>
+        const user = requireAuth();
+        if (user) {
+            if (user.role === 'ADMIN') { window.location.href = 'admin.html'; }
+            renderNavbar(user);
+            document.getElementById('greeting').textContent = `Welcome back, ${user.name}!`;
+            loadDashboard();
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await api.studentDashboard();
+                if (!res.success) return;
+                const d = res.data;
+
+                // Stats
+                const reports = d.recentReports || [];
+                const avgScore = reports.length > 0
+                    ? Math.round(reports.reduce((a,r) => a + r.matchScore, 0) / reports.length)
+                    : 0;
+
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stat-card"><div class="stat-value">${(d.detectedSkills || []).length}</div><div class="stat-label">Skills Detected</div></div>
+                    <div class="stat-card"><div class="stat-value">${reports.length}</div><div class="stat-label">Analyses Run</div></div>
+                    <div class="stat-card"><div class="stat-value">${avgScore}%</div><div class="stat-label">Avg Match Score</div></div>
+                    <div class="stat-card"><div class="stat-value">${d.resumeFileName ? '✓' : '✕'}</div><div class="stat-label">Resume Status</div></div>
+                `;
+
+                // Resume
+                if (d.resumeFileName) {
+                    document.getElementById('resumeSection').innerHTML = `
+                        <div style="display:flex; align-items:center; gap:16px; padding:16px; background:var(--bg-secondary); border-radius:var(--radius-md);">
+                            <span style="font-size:2.5rem;">📄</span>
+                            <div>
+                                <div style="font-weight:600;">${d.resumeFileName}</div>
+                                <div style="color:var(--text-muted); font-size:0.85rem;">Latest upload</div>
+                            </div>
+                        </div>
+                        <div class="mt-2"><a href="upload.html" class="btn btn-secondary btn-sm">Upload New</a></div>
+                    `;
+                }
+
+                // Skills
+                if (d.detectedSkills && d.detectedSkills.length > 0) {
+                    document.getElementById('skillsSection').innerHTML = `
+                        <div class="skill-tags">${d.detectedSkills.map(s => `<span class="skill-tag detected">${s}</span>`).join('')}</div>
+                    `;
+                }
+
+                // Reports
+                if (reports.length > 0) {
+                    document.getElementById('reportsSection').innerHTML = `
+                        <div class="table-wrapper"><table>
+                            <thead><tr><th>Role</th><th>Match Score</th><th>Status</th><th>Date</th><th></th></tr></thead>
+                            <tbody>${reports.map(r => `
+                                <tr>
+                                    <td><strong>${r.jobRoleName}</strong></td>
+                                    <td>${r.matchScore}%</td>
+                                    <td>${getScoreBadge(r.matchScore)}</td>
+                                    <td style="color:var(--text-muted)">${new Date(r.createdAt).toLocaleDateString()}</td>
+                                    <td><a href="analysis.html?report=${r.reportId}" class="btn btn-outline btn-sm">View</a></td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table></div>
+                        <div class="mt-2"><a href="analysis.html" class="btn btn-primary btn-sm">New Analysis</a></div>
+                    `;
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to load dashboard', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

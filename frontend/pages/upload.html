@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Resume - Placify</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar"></nav>
+    <div class="page-wrapper">
+        <main class="main-content">
+            <div class="container" style="max-width:700px;">
+                <div class="section-header text-center">
+                    <h1>Upload Your Resume</h1>
+                    <p>Upload a PDF resume and we'll extract your technical skills automatically.</p>
+                </div>
+
+                <div class="card">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">Drag & drop your PDF resume here</div>
+                        <div class="upload-hint">or click to browse • PDF only • Max 5MB</div>
+                        <input type="file" id="fileInput" accept=".pdf" hidden>
+                    </div>
+
+                    <div id="filePreview" class="hidden mt-2" style="display:none; padding:16px; background:var(--bg-secondary); border-radius:var(--radius-md); align-items:center; gap:16px;">
+                        <span style="font-size:2rem;">📄</span>
+                        <div style="flex:1;">
+                            <div id="fileName" style="font-weight:600;"></div>
+                            <div id="fileSize" style="color:var(--text-muted); font-size:0.85rem;"></div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="clearFile()">✕</button>
+                    </div>
+
+                    <button class="btn btn-primary btn-block btn-lg mt-3" id="uploadBtn" disabled onclick="uploadFile()">
+                        Upload & Analyze
+                    </button>
+                </div>
+
+                <div id="resultSection" class="card mt-3" style="display:none;">
+                    <div class="card-header">
+                        <div class="card-title">✅ Skills Detected</div>
+                        <div class="card-subtitle" id="resultSubtitle"></div>
+                    </div>
+                    <div class="skill-tags" id="detectedSkills"></div>
+                    <div class="mt-3">
+                        <a href="analysis.html" class="btn btn-primary">Run Skill Gap Analysis →</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script>
+        const user = requireAuth();
+        if (user) renderNavbar(user);
+
+        let selectedFile = null;
+        const zone = document.getElementById('uploadZone');
+        const input = document.getElementById('fileInput');
+
+        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault(); zone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        input.addEventListener('change', () => { if (input.files.length) handleFile(input.files[0]); });
+
+        function handleFile(file) {
+            if (file.type !== 'application/pdf') { showToast('Only PDF files allowed', 'error'); return; }
+            if (file.size > 5 * 1024 * 1024) { showToast('File too large (max 5MB)', 'error'); return; }
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+            document.getElementById('filePreview').style.display = 'flex';
+            document.getElementById('uploadBtn').disabled = false;
+            zone.style.display = 'none';
+        }
+
+        function clearFile() {
+            selectedFile = null; input.value = '';
+            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('uploadBtn').disabled = true;
+            zone.style.display = '';
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) return;
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true; btn.textContent = 'Processing...';
+            showLoading();
+            try {
+                const res = await api.uploadResume(selectedFile);
+                hideLoading();
+                if (res.success) {
+                    showToast(`Found ${res.data.skillCount} skills!`, 'success');
+                    document.getElementById('resultSubtitle').textContent =
+                        `${res.data.skillCount} technical skills detected from ${res.data.fileName}`;
+                    document.getElementById('detectedSkills').innerHTML =
+                        res.data.detectedSkills.map(s => `<span class="skill-tag detected">${s}</span>`).join('');
+                    document.getElementById('resultSection').style.display = '';
+                } else {
+                    showToast(res.message || 'Upload failed', 'error');
+                }
+            } catch (err) {
+                hideLoading();
+                showToast('Upload failed. Please try again.', 'error');
+            }
+            btn.disabled = false; btn.textContent = 'Upload & Analyze';
+        }
+    </script>
+</body>
+</html>

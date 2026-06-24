@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Placify - Analyze your resume against job roles, identify skill gaps, and get a personalized learning roadmap for placements.">
+    <title>Placify - Student Placement Skill Gap Analyzer</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar"></nav>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>Bridge Your <span class="gradient-text">Skill Gap</span><br>Ace Your Placement</h1>
+                <p>Upload your resume, pick a target role, and instantly discover which skills you need to learn. Get a personalized roadmap to placement success.</p>
+                <div class="hero-actions">
+                    <a href="pages/register.html" class="btn btn-primary btn-lg">Get Started Free</a>
+                    <a href="pages/login.html" class="btn btn-outline btn-lg">Login</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="container">
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h3>Smart Resume Parsing</h3>
+                    <p>Upload your PDF resume and our engine extracts technical skills automatically using advanced text analysis.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Skill Gap Analysis</h3>
+                    <p>Compare your skills against real job role requirements. See exactly what you're missing with a match percentage.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🗺️</div>
+                    <h3>Learning Roadmap</h3>
+                    <p>Get a personalized improvement plan with curated resources for every missing skill to boost your profile.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💼</div>
+                    <h3>Multiple Job Roles</h3>
+                    <p>Analyze against various roles — Java Backend, Full Stack, DevOps, QA — and find your best fit.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Visual Dashboard</h3>
+                    <p>Track your progress with beautiful charts, skill breakdowns, and historical analysis reports.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Secure & Private</h3>
+                    <p>Your resume and data stay secure with session-based authentication and role-based access control.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="container text-center" style="padding: 60px 0 80px;">
+            <h2 style="font-size: 2rem; margin-bottom: 12px;">Ready to discover your skill gaps?</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 28px; font-size: 1.1rem;">Join hundreds of students preparing smarter for placements.</p>
+            <a href="pages/register.html" class="btn btn-primary btn-lg">Create Your Account</a>
+        </section>
+    </main>
+
+    <footer style="text-align:center; padding:24px; border-top:1px solid var(--border); color:var(--text-muted); font-size:0.85rem;">
+        © 2026 Placify. Built for placement success.
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        const user = getUser();
+        if (user) window.location.href = 'pages/dashboard.html';
+        renderNavbar(null);
+    </script>
+</body>
+</html>

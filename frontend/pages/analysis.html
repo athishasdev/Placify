@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Gap Analysis - Placify</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar"></nav>
+    <div class="page-wrapper">
+        <main class="main-content">
+            <div class="container">
+                <div class="section-header">
+                    <h1>Skill Gap Analysis</h1>
+                    <p>Select a target job role to analyze your resume against its requirements.</p>
+                </div>
+
+                <!-- Role Selection -->
+                <div class="card mb-3" id="roleSelection">
+                    <div class="card-header">
+                        <div class="card-title">🎯 Select Target Role</div>
+                    </div>
+                    <div class="form-group">
+                        <select class="form-select" id="roleSelect">
+                            <option value="">Loading roles...</option>
+                        </select>
+                    </div>
+                    <div id="roleInfo" style="display:none;" class="mb-2">
+                        <p id="roleDesc" style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:12px;"></p>
+                        <div><strong style="font-size:0.85rem; color:var(--text-muted);">Required Skills:</strong></div>
+                        <div class="skill-tags mt-1" id="roleSkills"></div>
+                    </div>
+                    <button class="btn btn-primary btn-lg" id="analyzeBtn" onclick="runAnalysis()" disabled>
+                        Run Analysis
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div id="resultSection" style="display:none;">
+                    <div class="analysis-result">
+                        <div class="analysis-sidebar">
+                            <div class="card">
+                                <div id="scoreRing"></div>
+                                <div class="score-label" id="scoreLabel"></div>
+                                <div class="mt-2" id="scoreBadge"></div>
+                                <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); font-size:0.85rem; color:var(--text-muted);">
+                                    <div>Resume: <span id="resFileName" style="color:var(--text-secondary);"></span></div>
+                                    <div class="mt-1">Role: <span id="resRoleName" style="color:var(--text-secondary);"></span></div>
+                                    <div class="mt-1">Total Required: <span id="resTotalReq" style="color:var(--text-secondary);"></span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-main">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <div class="card-title" style="color:var(--success);">✅ Matched Skills (<span id="matchedCount">0</span>)</div>
+                                </div>
+                                <div class="skill-tags" id="matchedSkills"></div>
+                            </div>
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <div class="card-title" style="color:var(--danger);">❌ Missing Skills (<span id="missingCount">0</span>)</div>
+                                </div>
+                                <div class="skill-tags" id="missingSkills"></div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">🗺️ Learning Roadmap</div>
+                                    <div class="card-subtitle">Personalized improvement plan for missing skills</div>
+                                </div>
+                                <ul class="roadmap-list" id="roadmapList"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script>
+        const user = requireAuth();
+        if (user) renderNavbar(user);
+
+        let roles = [];
+
+        async function init() {
+            // Load roles
+            try {
+                const res = await api.getRoles();
+                if (res.success) {
+                    roles = res.data;
+                    const sel = document.getElementById('roleSelect');
+                    sel.innerHTML = '<option value="">-- Choose a job role --</option>' +
+                        roles.map(r => `<option value="${r.id}">${r.roleName}</option>`).join('');
+                }
+            } catch (e) { showToast('Failed to load roles', 'error'); }
+
+            // Check if viewing a report
+            const params = new URLSearchParams(window.location.search);
+            const reportId = params.get('report');
+            if (reportId) loadReport(reportId);
+        }
+
+        document.getElementById('roleSelect').addEventListener('change', function() {
+            const role = roles.find(r => r.id == this.value);
+            const info = document.getElementById('roleInfo');
+            const btn = document.getElementById('analyzeBtn');
+            if (role) {
+                document.getElementById('roleDesc').textContent = role.description || '';
+                document.getElementById('roleSkills').innerHTML =
+                    role.requiredSkills.map(s => `<span class="skill-tag admin">${s}</span>`).join('');
+                info.style.display = '';
+                btn.disabled = false;
+            } else {
+                info.style.display = 'none';
+                btn.disabled = true;
+            }
+        });
+
+        async function runAnalysis() {
+            const roleId = document.getElementById('roleSelect').value;
+            if (!roleId) { showToast('Select a role first', 'error'); return; }
+
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true; btn.textContent = 'Analyzing...';
+            showLoading();
+
+            try {
+                const res = await api.analyze(parseInt(roleId));
+                hideLoading();
+                if (res.success) {
+                    showToast('Analysis complete!', 'success');
+                    displayResults(res.data);
+                } else {
+                    showToast(res.message || 'Analysis failed', 'error');
+                }
+            } catch (err) {
+                hideLoading();
+                showToast('Analysis failed. Make sure you have uploaded a resume.', 'error');
+            }
+            btn.disabled = false; btn.textContent = 'Run Analysis';
+        }
+
+        async function loadReport(id) {
+            showLoading();
+            try {
+                const res = await api.getReport(id);
+                hideLoading();
+                if (res.success) displayResults(res.data);
+            } catch (e) { hideLoading(); showToast('Failed to load report', 'error'); }
+        }
+
+        function displayResults(data) {
+            document.getElementById('resultSection').style.display = '';
+            document.getElementById('scoreRing').innerHTML = createScoreRing(data.matchScore);
+            document.getElementById('scoreLabel').textContent =
+                `${data.matchedSkills.length} of ${data.totalRequired} skills matched`;
+            document.getElementById('scoreBadge').innerHTML = getScoreBadge(data.matchScore);
+            document.getElementById('resFileName').textContent = data.resumeFileName;
+            document.getElementById('resRoleName').textContent = data.jobRoleName;
+            document.getElementById('resTotalReq').textContent = data.totalRequired + ' skills';
+
+            document.getElementById('matchedCount').textContent = data.matchedSkills.length;
+            document.getElementById('matchedSkills').innerHTML = data.matchedSkills.length > 0
+                ? data.matchedSkills.map(s => `<span class="skill-tag matched">${s}</span>`).join('')
+                : '<p style="color:var(--text-muted)">No matching skills found</p>';
+
+            document.getElementById('missingCount').textContent = data.missingSkills.length;
+            document.getElementById('missingSkills').innerHTML = data.missingSkills.length > 0
+                ? data.missingSkills.map(s => `<span class="skill-tag missing">${s}</span>`).join('')
+                : '<p style="color:var(--success)">All skills matched! 🎉</p>';
+
+            const roadmap = data.roadmap || [];
+            document.getElementById('roadmapList').innerHTML = roadmap.length > 0
+                ? roadmap.map(r => `
+                    <li class="roadmap-item">
+                        <div class="roadmap-skill">${r.skill}</div>
+                        <div class="roadmap-desc">${r.description}</div>
+                        ${r.resource ? `<a href="${r.resource}" target="_blank" class="roadmap-link">📚 Learning Resource →</a>` : ''}
+                    </li>`).join('')
+                : '<p style="color:var(--success); padding:16px;">No gaps to fill. You\'re ready! 🎉</p>';
+
+            document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        init();
+    </script>
+</body>
+</html>

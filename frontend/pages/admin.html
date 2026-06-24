@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Placify</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar"></nav>
+    <div class="page-wrapper">
+        <main class="main-content">
+            <div class="container">
+                <div class="section-header">
+                    <h1>Admin Dashboard</h1>
+                    <p>Manage job roles and view platform statistics.</p>
+                </div>
+
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Total Students</div></div>
+                    <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Job Roles</div></div>
+                    <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Resumes</div></div>
+                    <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Analyses</div></div>
+                </div>
+
+                <div class="grid-2">
+                    <!-- Job Roles Management -->
+                    <div class="card">
+                        <div class="section-actions">
+                            <div>
+                                <div class="card-title">💼 Job Roles</div>
+                                <div class="card-subtitle">Manage job role templates</div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="openRoleModal()">+ Add Role</button>
+                        </div>
+                        <div id="rolesList"></div>
+                    </div>
+
+                    <!-- Top Missing Skills -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📉 Most Commonly Missing Skills</div>
+                            <div class="card-subtitle">Skills students lack the most</div>
+                        </div>
+                        <div id="missingSkillsChart"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Role Modal -->
+    <div class="modal-overlay" id="roleModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Add Job Role</h3>
+                <button class="modal-close" onclick="closeRoleModal()">✕</button>
+            </div>
+            <form id="roleForm">
+                <input type="hidden" id="roleId">
+                <div class="form-group">
+                    <label class="form-label">Role Name</label>
+                    <input type="text" id="roleName" class="form-input" placeholder="e.g. Java Backend Developer" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="roleDesc" class="form-textarea" placeholder="Job role description..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Required Skills (comma-separated)</label>
+                    <textarea id="roleSkills" class="form-textarea" placeholder="Java, Spring Boot, SQL, Git..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Min Match Threshold (%)</label>
+                    <input type="number" id="roleThreshold" class="form-input" value="50" min="0" max="100">
+                </div>
+                <div class="flex gap-1">
+                    <button type="submit" class="btn btn-primary" style="flex:1;">Save Role</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeRoleModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script>
+        const user = requireAdmin();
+        if (user) { renderNavbar(user); loadAdmin(); }
+
+        async function loadAdmin() {
+            try {
+                const [dashRes, rolesRes] = await Promise.all([api.adminDashboard(), api.getRoles()]);
+
+                if (dashRes.success) {
+                    const d = dashRes.data;
+                    document.getElementById('statsGrid').innerHTML = `
+                        <div class="stat-card"><div class="stat-value">${d.totalStudents}</div><div class="stat-label">Total Students</div></div>
+                        <div class="stat-card"><div class="stat-value">${d.totalJobRoles}</div><div class="stat-label">Job Roles</div></div>
+                        <div class="stat-card"><div class="stat-value">${d.totalResumes}</div><div class="stat-label">Resumes Uploaded</div></div>
+                        <div class="stat-card"><div class="stat-value">${d.totalAnalyses}</div><div class="stat-label">Analyses Run</div></div>
+                    `;
+
+                    // Missing skills chart
+                    const skills = d.topMissingSkills || [];
+                    if (skills.length > 0) {
+                        const max = skills[0].count;
+                        document.getElementById('missingSkillsChart').innerHTML = skills.map(s => `
+                            <div style="margin-bottom:12px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+                                    <span>${s.skillName}</span>
+                                    <span style="color:var(--text-muted);">${s.count} students</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width:${(s.count / max) * 100}%"></div>
+                                </div>
+                            </div>`).join('');
+                    } else {
+                        document.getElementById('missingSkillsChart').innerHTML =
+                            '<p style="color:var(--text-muted); text-align:center; padding:24px;">No analysis data yet</p>';
+                    }
+                }
+
+                if (rolesRes.success) renderRoles(rolesRes.data);
+            } catch (err) { showToast('Failed to load admin data', 'error'); }
+        }
+
+        function renderRoles(roles) {
+            if (roles.length === 0) {
+                document.getElementById('rolesList').innerHTML =
+                    '<div class="empty-state"><p>No job roles defined yet</p></div>';
+                return;
+            }
+            document.getElementById('rolesList').innerHTML = roles.map(r => `
+                <div style="padding:16px; background:var(--bg-secondary); border-radius:var(--radius-md); margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                        <div>
+                            <strong>${r.roleName}</strong>
+                            <div style="font-size:0.8rem; color:var(--text-muted);">Threshold: ${r.minMatchThreshold}%</div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button class="btn btn-secondary btn-sm" onclick='editRole(${JSON.stringify(r).replace(/'/g, "\\'")})'>Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteRole(${r.id})">Delete</button>
+                        </div>
+                    </div>
+                    <div class="skill-tags">${r.requiredSkills.map(s => `<span class="skill-tag admin">${s}</span>`).join('')}</div>
+                </div>`).join('');
+        }
+
+        function openRoleModal(role = null) {
+            document.getElementById('modalTitle').textContent = role ? 'Edit Job Role' : 'Add Job Role';
+            document.getElementById('roleId').value = role ? role.id : '';
+            document.getElementById('roleName').value = role ? role.roleName : '';
+            document.getElementById('roleDesc').value = role ? (role.description || '') : '';
+            document.getElementById('roleSkills').value = role ? role.requiredSkills.join(', ') : '';
+            document.getElementById('roleThreshold').value = role ? role.minMatchThreshold : 50;
+            document.getElementById('roleModal').classList.add('active');
+        }
+
+        function closeRoleModal() {
+            document.getElementById('roleModal').classList.remove('active');
+        }
+
+        function editRole(role) { openRoleModal(role); }
+
+        async function deleteRole(id) {
+            if (!confirm('Delete this role?')) return;
+            try {
+                await api.deleteRole(id);
+                showToast('Role deleted', 'success');
+                loadAdmin();
+            } catch (e) { showToast('Delete failed', 'error'); }
+        }
+
+        document.getElementById('roleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('roleId').value;
+            const data = {
+                roleName: document.getElementById('roleName').value,
+                description: document.getElementById('roleDesc').value,
+                requiredSkills: document.getElementById('roleSkills').value.split(',').map(s => s.trim()).filter(Boolean),
+                minMatchThreshold: parseInt(document.getElementById('roleThreshold').value) || 50,
+            };
+            try {
+                const res = id ? await api.updateRole(id, data) : await api.createRole(data);
+                if (res.success) {
+                    showToast(id ? 'Role updated' : 'Role created', 'success');
+                    closeRoleModal();
+                    loadAdmin();
+                } else {
+                    showToast(res.message || 'Failed', 'error');
+                }
+            } catch (e) { showToast('Operation failed', 'error'); }
+        });
+    </script>
+</body>
+</html>
