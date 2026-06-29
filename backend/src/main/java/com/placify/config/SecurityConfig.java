@@ -87,7 +87,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, SimpleAuthFilter simpleAuthFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // Disable CSRF — we're using stateless-friendly session + CORS
             .csrf(csrf -> csrf.disable())
@@ -121,8 +121,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )
-            
-            .addFilterBefore(simpleAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
 
             .authenticationProvider(authenticationProvider())
 
