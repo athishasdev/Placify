@@ -1,11 +1,11 @@
 package com.placify.controller;
 
+import jakarta.servlet.http.HttpSession;
 import com.placify.dto.ApiResponse;
 import com.placify.dto.LoginRequest;
 import com.placify.dto.RegisterRequest;
 import com.placify.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,8 +13,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
+    import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+
 
 import java.util.Map;
 
@@ -39,32 +40,35 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> login(
-            @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
 
-        // Authenticate via Spring Security's AuthenticationManager
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+@PostMapping("/login")
+public ResponseEntity<ApiResponse<Map<String, Object>>> login(
+        @Valid @RequestBody LoginRequest request,
+        HttpServletRequest requestServlet) {
 
-        // Create a new SecurityContext and set the authentication
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(authentication);
-        SecurityContextHolder.setContext(securityContext);
+    Authentication authentication =
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    ));
 
-        // Explicitly save the SecurityContext into the HTTP session
-        // This is the KEY step — without it, subsequent requests lose authentication
-        HttpSession session = httpRequest.getSession(true);
-        session.setAttribute(
-                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                securityContext
-        );
+    SecurityContext context = SecurityContextHolder.createEmptyContext();
+    context.setAuthentication(authentication);
+    SecurityContextHolder.setContext(context);
 
-        // Build response with user data
-        ApiResponse<Map<String, Object>> response = authService.buildLoginResponse(request.getEmail());
-        return ResponseEntity.ok(response);
-    }
+    HttpSession session = requestServlet.getSession(true);
+
+    session.setAttribute(
+            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+            context
+    );
+
+    ApiResponse<Map<String, Object>> response =
+            authService.buildLoginResponse(request.getEmail());
+
+    return ResponseEntity.ok(response);
+}
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {

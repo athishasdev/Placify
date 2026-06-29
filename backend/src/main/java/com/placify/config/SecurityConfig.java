@@ -46,10 +46,13 @@ public class SecurityConfig {
         return email -> {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+
             return new org.springframework.security.core.userdetails.User(
                     user.getEmail(),
                     user.getPassword(),
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                    Collections.singletonList(
+                            new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+                    )
             );
         };
     }
@@ -67,67 +70,102 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    /**
-     * Inline CORS configuration — allows all frontend dev origins with credentials.
-     * Must be defined HERE (not in a separate CorsConfig bean) so that
-     * Spring Security's CORS filter picks it up before the security filter chain.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));   // allow any origin in dev
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-User-Email"));
+
+        // Localhost for development
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://localhost:5173"
+        ));
+
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "OPTIONS"
+        ));
+
+        configuration.setAllowedHeaders(List.of("*"));
+
         configuration.setAllowCredentials(true);
+
         configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-            // Disable CSRF — we're using stateless-friendly session + CORS
-            .csrf(csrf -> csrf.disable())
 
-            // Wire the CORS source defined above
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
 
-            // Return 401 JSON instead of redirecting to a login page
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                    response.setContentType("application/json");
-                    response.getWriter().write(
-                        "{\"success\":false,\"message\":\"Authentication required\"}"
-                    );
-                })
-                .accessDeniedHandler((request, response, accessDeniedException) -> {
-                    response.setStatus(HttpStatus.FORBIDDEN.value());
-                    response.setContentType("application/json");
-                    response.getWriter().write(
-                        "{\"success\":false,\"message\":\"Access denied\"}"
-                    );
-                })
-            )
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/roles").authenticated()
-                .requestMatchers("/api/roles/**").hasRole("ADMIN")
-                .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll()
-            )
+                .securityContext(context ->
+                   context.requireExplicitSave(false)
+                )
 
-            .authenticationProvider(authenticationProvider())
+                .exceptionHandling(ex -> ex
 
-            // Simple session config
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            );
+                        .authenticationEntryPoint((request, response, authException) -> {
+
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType("application/json");
+
+                            response.getWriter().write("""
+                                    {
+                                      "success":false,
+                                      "message":"Authentication required"
+                                    }
+                                    """);
+                        })
+
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.setContentType("application/json");
+
+                            response.getWriter().write("""
+                                    {
+                                      "success":false,
+                                      "message":"Access denied"
+                                    }
+                                    """);
+                        })
+                )
+
+                .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/roles").authenticated()
+
+                        .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
+
+                        .requestMatchers("/api/roles/**").hasRole("ADMIN")
+
+                        .requestMatchers("/api/**").authenticated()
+
+                        .anyRequest().permitAll()
+                )
+
+                .authenticationProvider(authenticationProvider())
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                );
 
         return http.build();
     }
