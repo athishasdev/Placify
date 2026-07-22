@@ -1,19 +1,22 @@
 // ========== Placify API Client ==========
-const API_BASE = 'http://localhost:8083/api';
+const getApiBase = () => (window.CONFIG && window.CONFIG.API_BASE_URL) ? window.CONFIG.API_BASE_URL : 'http://localhost:8080/api';
 
 const api = {
     async request(url, options = {}) {
         let userEmail = null;
+        let token = null;
         try {
             const user = JSON.parse(localStorage.getItem('placify_user'));
             if (user && user.email) userEmail = user.email;
+            if (user && user.token) token = user.token;
         } catch (e) {}
 
         const config = {
-            credentials: 'omit', // No longer need cookies for auth
+            credentials: 'omit',
             headers: { 
                 'Content-Type': 'application/json',
                 ...(userEmail ? { 'X-User-Email': userEmail } : {}),
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 ...options.headers 
             },
             ...options,
@@ -23,7 +26,8 @@ const api = {
             delete config.headers['Content-Type'];
         }
         try {
-            const res = await fetch(`${API_BASE}${url}`, config);
+            const baseUrl = getApiBase();
+            const res = await fetch(`${baseUrl}${url}`, config);
             if (res.status === 401 || res.status === 403) {
                 const current = window.location.pathname;
                 if (!current.includes('login') && !current.includes('register') && !current.includes('index')) {

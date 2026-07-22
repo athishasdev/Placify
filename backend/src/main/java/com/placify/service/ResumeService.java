@@ -41,15 +41,24 @@ public class ResumeService {
         }
 
         // Create upload directory if it doesn't exist
-        Path uploadPath = Paths.get(uploadDir);
+        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
 
-        // Save file with unique name
-        String originalName = file.getOriginalFilename();
-        String storedName = UUID.randomUUID() + "_" + (originalName != null ? originalName : "resume.pdf");
-        Path filePath = uploadPath.resolve(storedName);
+        // Sanitize original file name and prevent path traversal
+        String rawOriginalName = file.getOriginalFilename();
+        String safeName = "resume.pdf";
+        if (rawOriginalName != null && !rawOriginalName.trim().isEmpty()) {
+            safeName = Paths.get(rawOriginalName).getFileName().toString().replaceAll("[^a-zA-Z0-9._-]", "_");
+        }
+        
+        String storedName = UUID.randomUUID() + "_" + safeName;
+        Path filePath = uploadPath.resolve(storedName).normalize();
+        if (!filePath.startsWith(uploadPath)) {
+            throw new IllegalArgumentException("Path traversal attempted: Invalid file path");
+        }
+
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
         // Extract text from PDF
@@ -61,7 +70,7 @@ public class ResumeService {
         // Build and save resume entity
         Resume resume = Resume.builder()
                 .user(user)
-                .fileName(originalName != null ? originalName : "resume.pdf")
+                .fileName(safeName)
                 .filePath(filePath.toString())
                 .extractedText(extractedText)
                 .detectedSkills(detectedSkills)

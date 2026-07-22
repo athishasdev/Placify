@@ -1,26 +1,43 @@
-# Compiled class files
+# Compiled class files & build target
 *.class
 target/
+build/
+out/
+bin/
 
-# Maven
-.mvn/wrapper/maven-wrapper.jar
+# Maven & Gradle
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
 
-# IDE
+# IDE & Editors
 .idea/
 *.iml
 .vscode/
+*.swp
+*.tmp
+.project
+.classpath
+.settings/
 
-# OS
+# OS metadata
 .DS_Store
 Thumbs.db
 
-# Resume uploads
-backend/uploads/
-
-# Logs
-*.log
-logs/
-
-# Environment
+# Environment & Secrets
+.env
 *.env
 application-local.properties
+
+# Uploads & User Generated Files
+uploads/
+backend/uploads/
+**/uploads/*
+!**/uploads/.gitkeep
+
+# Logs
+logs/
+backend/logs/
+*.log
+
+# Node dependencies (if any)
+node_modules/

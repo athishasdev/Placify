@@ -1,5 +1,6 @@
 package com.placify.service;
 
+import com.placify.config.JwtService;
 import com.placify.dto.ApiResponse;
 import com.placify.dto.RegisterRequest;
 import com.placify.model.User;
@@ -18,10 +19,12 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     public ApiResponse<Map<String, Object>> register(RegisterRequest request) {
@@ -38,11 +41,14 @@ public class AuthService {
 
         userRepository.save(user);
 
+        String token = jwtService.generateToken(user.getEmail());
+
         Map<String, Object> data = new HashMap<>();
         data.put("id", user.getId());
         data.put("name", user.getName());
         data.put("email", user.getEmail());
         data.put("role", user.getRole().name());
+        data.put("token", token);
 
         return ApiResponse.success("Registration successful", data);
     }
@@ -54,11 +60,14 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String token = jwtService.generateToken(user.getEmail());
+
         Map<String, Object> data = new HashMap<>();
         data.put("id", user.getId());
         data.put("name", user.getName());
         data.put("email", user.getEmail());
         data.put("role", user.getRole().name());
+        data.put("token", token);
 
         return ApiResponse.success("Login successful", data);
     }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Placify</title>
+    <title>Sign In - Placify</title>
     <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body>
@@ -11,33 +11,52 @@
         <div class="auth-card">
             <div class="auth-logo">
                 <h1>Placify</h1>
-                <p>Sign in to your account</p>
+                <p>Placement Skill Gap Analyzer</p>
             </div>
+
+            <!-- Demo Account Quick Selector -->
+            <div style="margin-bottom: 20px;">
+                <label class="form-label" style="margin-bottom: 6px;">Quick Fill Demo Accounts:</label>
+                <div class="demo-pill-group">
+                    <button type="button" class="demo-pill" onclick="fillDemo('student')">⚡ Demo Student</button>
+                    <button type="button" class="demo-pill" onclick="fillDemo('admin')">⚡ Demo Admin</button>
+                </div>
+            </div>
+
             <form id="loginForm">
                 <div class="form-group">
                     <label class="form-label" for="email">Email Address</label>
-                    <input type="email" id="email" class="form-input" placeholder="you@example.com" required>
+                    <input type="email" id="email" class="form-input" placeholder="you@example.com" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
                 </div>
                 <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Sign In</button>
             </form>
+
             <div class="auth-footer">
-                Don't have an account? <a href="register.html">Create one</a>
-            </div>
-            <div style="display: none;">
-                <strong style="color:var(--text-secondary);">Demo Accounts:</strong><br>
-                Student: student@placify.com / student123<br>
-                Admin: admin@placify.com / admin123
+                Don't have an account? <a href="register.html">Create an account</a>
             </div>
         </div>
     </div>
+
+    <script src="../js/config.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/utils.js"></script>
     <script>
         if (getUser()) window.location.href = 'dashboard.html';
+
+        function fillDemo(type) {
+            const demo = window.CONFIG ? window.CONFIG.DEMO_ACCOUNTS : null;
+            if (type === 'student') {
+                document.getElementById('email').value = demo ? demo.STUDENT_EMAIL : 'student@placify.com';
+                document.getElementById('password').value = demo ? demo.STUDENT_PASS : 'student123';
+            } else if (type === 'admin') {
+                document.getElementById('email').value = demo ? demo.ADMIN_EMAIL : 'admin@placify.com';
+                document.getElementById('password').value = demo ? demo.ADMIN_PASS : 'admin123';
+            }
+        }
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -53,7 +72,7 @@
                     showToast('Welcome back, ' + res.data.name + '!', 'success');
                     setTimeout(() => {
                         window.location.href = res.data.role === 'ADMIN' ? 'admin.html' : 'dashboard.html';
-                    }, 500);
+                    }, 400);
                 } else {
                     showToast(res.message || 'Login failed', 'error');
                 }

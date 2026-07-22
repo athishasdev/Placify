@@ -112,13 +112,13 @@ async function handleLogout() {
     window.location.href = inPagesDir ? '../index.html' : 'index.html';
 }
 
-function createScoreRing(score, size = 160) {
+function createScoreRing(score, size = 140) {
     const radius = (size - 16) / 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (score / 100) * circumference;
-    let color = '#E17055';
-    if (score >= 70) color = '#00B894';
-    else if (score >= 40) color = '#FDCB6E';
+    let color = '#ef4444';
+    if (score >= 70) color = '#10b981';
+    else if (score >= 40) color = '#f59e0b';
 
     return `
         <div class="score-ring" style="width:${size}px;height:${size}px;">

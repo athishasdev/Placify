@@ -18,22 +18,30 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final UserRepository userRepository;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(UserRepository userRepository) {
+    public SecurityConfig(UserRepository userRepository,
+                          JwtAuthenticationFilter jwtAuthenticationFilter) {
+
         this.userRepository = userRepository;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
@@ -43,15 +51,25 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
+
         return email -> {
+
             User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+                    .orElseThrow(() ->
+                            new UsernameNotFoundException("User not found"));
 
             return new org.springframework.security.core.userdetails.User(
+
                     user.getEmail(),
+
                     user.getPassword(),
+
                     Collections.singletonList(
-                            new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+
+                            new SimpleGrantedAuthority(
+
+                                    "ROLE_" + user.getRole().name()
+                            )
                     )
             );
         };
@@ -59,27 +77,39 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider();
+
         provider.setUserDetailsService(userDetailsService());
+
         provider.setPasswordEncoder(passwordEncoder());
+
         return provider;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration configuration)
+            throws Exception {
+
+        return configuration.getAuthenticationManager();
     }
+
+    @org.springframework.beans.factory.annotation.Value("${placify.cors.allowed-origins:http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500,http://localhost:8080}")
+    private String rawAllowedOrigins;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Localhost for development
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:5173"
-        ));
+        List<String> origins = Arrays.stream(rawAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+
+        configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(Arrays.asList(
                 "GET",
@@ -94,8 +124,6 @@ public class SecurityConfig {
 
         configuration.setAllowCredentials(true);
 
-        configuration.setMaxAge(3600L);
-
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
@@ -105,7 +133,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
         http
 
@@ -113,8 +142,10 @@ public class SecurityConfig {
 
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                .securityContext(context ->
-                   context.requireExplicitSave(false)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
                 )
 
                 .exceptionHandling(ex -> ex
@@ -122,6 +153,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
 
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
+
                             response.setContentType("application/json");
 
                             response.getWriter().write("""
@@ -135,6 +167,7 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
 
                             response.setStatus(HttpStatus.FORBIDDEN.value());
+
                             response.setContentType("application/json");
 
                             response.getWriter().write("""
@@ -150,21 +183,27 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/roles").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/roles")
+                        .authenticated()
 
-                        .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
+                        .requestMatchers("/api/dashboard/admin")
+                        .hasRole("ADMIN")
 
-                        .requestMatchers("/api/roles/**").hasRole("ADMIN")
+                        .requestMatchers("/api/roles/**")
+                        .hasRole("ADMIN")
 
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/api/**")
+                        .authenticated()
 
-                        .anyRequest().permitAll()
+                        .anyRequest()
+                        .permitAll()
                 )
 
                 .authenticationProvider(authenticationProvider())
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
 
         return http.build();

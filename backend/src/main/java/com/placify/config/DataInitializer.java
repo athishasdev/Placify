@@ -7,6 +7,7 @@ import com.placify.model.enums.UserRole;
 import com.placify.repository.JobRoleRepository;
 import com.placify.repository.SkillRepository;
 import com.placify.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,18 @@ import java.util.stream.Collectors;
 @Configuration
 public class DataInitializer {
 
+    @Value("${placify.demo.admin.email:admin@placify.com}")
+    private String adminEmail;
+
+    @Value("${placify.demo.admin.password:admin123}")
+    private String adminPassword;
+
+    @Value("${placify.demo.student.email:student@placify.com}")
+    private String studentEmail;
+
+    @Value("${placify.demo.student.password:student123}")
+    private String studentPassword;
+
     @Bean
     CommandLineRunner initData(UserRepository userRepository,
                                SkillRepository skillRepository,
@@ -25,22 +38,22 @@ public class DataInitializer {
                                PasswordEncoder passwordEncoder) {
         return args -> {
             // Create admin user if not exists
-            if (!userRepository.existsByEmail("admin@placify.com")) {
+            if (!userRepository.existsByEmail(adminEmail)) {
                 User admin = User.builder()
                         .name("Admin")
-                        .email("admin@placify.com")
-                        .password(passwordEncoder.encode("admin123"))
+                        .email(adminEmail)
+                        .password(passwordEncoder.encode(adminPassword))
                         .role(UserRole.ADMIN)
                         .build();
                 userRepository.save(admin);
             }
 
             // Create demo student if not exists
-            if (!userRepository.existsByEmail("student@placify.com")) {
+            if (!userRepository.existsByEmail(studentEmail)) {
                 User student = User.builder()
                         .name("Demo Student")
-                        .email("student@placify.com")
-                        .password(passwordEncoder.encode("student123"))
+                        .email(studentEmail)
+                        .password(passwordEncoder.encode(studentPassword))
                         .role(UserRole.STUDENT)
                         .build();
                 userRepository.save(student);

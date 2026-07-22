@@ -1,161 +1,173 @@
-# Placify — Student Placement Skill Gap Analyzer
+# Placify - Enterprise Placement Skill Gap Analyzer
 
-A full-stack web application that helps students identify missing skills for their target job roles and generates a personalized learning roadmap.
-
----
-
-## 🛠️ Tech Stack
-
-| Layer      | Technology |
-|------------|------------|
-| Frontend   | HTML5, CSS3, Vanilla JavaScript |
-| Backend    | Java 21, Spring Boot 3.4.3, Spring MVC, Spring Security |
-| ORM        | Spring Data JPA + Hibernate |
-| Database   | PostgreSQL |
-| PDF Parser | Apache PDFBox 3.0.4 |
-| Build Tool | Maven |
+Placify is a full-stack student placement skill gap analysis platform built with **Spring Boot 3.4** and modern **HTML5/CSS3/JavaScript**. It parses student PDF resumes, extracts technical competencies, compares them against target job roles, computes match scores, and generates actionable, personalized learning roadmaps.
 
 ---
 
-## ⚙️ Setup Instructions
+## 🌟 Modern Human-Designed UI
 
-### Prerequisites
-- Java 21+
-- Maven 3.8+
-- PostgreSQL 14+
-- A modern browser (Chrome, Firefox, Edge)
+Placify features a sleek, professional SaaS interface inspired by Linear, Vercel, Stripe, GitHub, and Notion:
+- **Zero AI-glowing artifacts**: No neon glows, no random floating blobs, no glassmorphism clutter.
+- **Strict 8px grid system**: Uniform spacing, padding, and layout boundaries.
+- **Accessible Typography**: High-contrast, clean font hierarchy using Google Inter.
+- **Single Accent Color System**: Refined Slate/Zinc dark baseline paired with Royal Blue accent (`#2563eb`).
+- **Responsive Layout**: Designed for mobile, tablet, laptop, and high-DPI desktop displays.
 
 ---
 
-### 1. Database Setup (PostgreSQL)
+## 🚀 Technology Stack
 
-Open pgAdmin or psql and run:
+### Backend
+- **Java 21**
+- **Spring Boot 3.4.3** (Web, Data JPA, Security, Validation)
+- **PostgreSQL** Database Driver & Hibernate ORM
+- **Apache PDFBox 3.0** (PDF Parsing & Skill Extraction Engine)
+- **JJWT 0.12** (Stateless Token Authentication)
+- **Lombok** & **Logback** (Structured File Logging)
 
+### Frontend
+- **HTML5** & **Vanilla CSS3** (Custom Design Tokens)
+- **Modern ES6 JavaScript** (`async/await`, Fetch API)
+- Parameterized Central Config (`config.js`)
+
+---
+
+## 📁 Folder Structure
+
+```
+Placify/
+├── backend/
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/com/placify/
+│   │       │   ├── config/          # Security, JWT, CORS, DataInitializer
+│   │       │   ├── controller/      # REST API Endpoints
+│   │       │   ├── dto/             # Request & Response DTOs
+│   │       │   ├── exception/       # Global Exception Handler
+│   │       │   ├── model/           # JPA Entities & Enums
+│   │       │   ├── repository/      # Spring Data Repositories
+│   │       │   └── service/         # Business Logic & PDF Processing
+│   │       └── resources/
+│   │           ├── application.properties        # Profile Selector
+│   │           ├── application-local.properties  # Local Dev Config
+│   │           ├── application-prod.properties   # Production Config
+│   │           └── logback-spring.xml            # Structured File Logging
+│   ├── pom.xml
+│   └── uploads/                     # Resume Storage Directory
+├── frontend/
+│   ├── css/
+│   │   └── styles.css               # Unified Design System
+│   ├── js/
+│   │   ├── config.js                # Environment API Base URL Config
+│   │   ├── api.js                   # API Client Wrapper
+│   │   └── utils.js                 # UI & Toast Utilities
+│   ├── pages/
+│   │   ├── admin.html               # Admin Dashboard & Role Management
+│   │   ├── analysis.html            # Skill Gap Analysis & Roadmap
+│   │   ├── dashboard.html           # Student Analytics Dashboard
+│   │   ├── login.html               # Authentication Portal
+│   │   ├── register.html            # Account Creation
+│   │   └── upload.html             # PDF Resume Upload Dropzone
+│   └── index.html                   # Public Landing Page
+├── docs/
+│   ├── deployment_guide.md          # Render, Neon & Vercel Guide
+│   └── postgresql_setup.md          # Database Installation Guide
+├── logs/                            # Application & Error Log Files
+├── .env.example                     # Environment Variables Template
+├── .gitignore                       # Production Git Exclusions
+└── README.md                        # Documentation
+```
+
+---
+
+## 🔑 Centralized Demo Credentials
+
+| Role | Email | Password | Access Level |
+|---|---|---|---|
+| **Admin** | `admin@placify.com` | `admin123` | Role creation, system metrics, skill management |
+| **Student** | `student@placify.com` | `student123` | Resume upload, gap analysis, roadmaps |
+
+---
+
+## ⚙️ Environment Variables Matrix
+
+Documented in [.env.example](file:///.env.example):
+
+| Variable | Default (Local) | Description |
+|---|---|---|
+| `SPRING_PROFILES_ACTIVE` | `local` | Active Spring profile (`local` or `prod`) |
+| `SERVER_PORT` | `8080` | Spring Boot HTTP port |
+| `DATABASE_URL` | `jdbc:postgresql://localhost:5432/placify` | PostgreSQL connection URL |
+| `DATABASE_USERNAME` | `postgres` | Database user |
+| `DATABASE_PASSWORD` | `postgres` | Database password |
+| `JWT_SECRET` | `WjNkbGR...` | Base64 encoded 256-bit secret key |
+| `UPLOAD_PATH` | `uploads/resumes` | Directory path for stored resumes |
+| `FRONTEND_URL` | `http://localhost:5500` | Frontend web client URL |
+| `ALLOWED_ORIGINS` | `http://localhost:5500,http://localhost:3000` | Comma-separated CORS origins |
+| `API_BASE_URL` | `http://localhost:8080/api` | Frontend API endpoint target |
+| `DEMO_ADMIN_EMAIL` | `admin@placify.com` | Centralized admin email |
+| `DEMO_ADMIN_PASSWORD` | `admin123` | Centralized admin password |
+| `DEMO_STUDENT_EMAIL` | `student@placify.com` | Centralized student email |
+| `DEMO_STUDENT_PASSWORD` | `student123` | Centralized student password |
+
+---
+
+## 🛠️ Local Setup & Quickstart
+
+### 1. Database Setup
+Create PostgreSQL database named `placify`:
 ```sql
 CREATE DATABASE placify;
 ```
 
-The schema will be created automatically by Hibernate (`ddl-auto=update`).
-Default seed data (admin user, skills, job roles) is loaded on first startup via `DataInitializer`.
-
----
-
-### 2. Configure Backend
-
-Edit `backend/src/main/resources/application.properties`:
-
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/placify
-spring.datasource.username=postgres
-spring.datasource.password=postgres    ← Change this
-```
-
----
-
-### 3. Run the Backend
-
+### 2. Backend Execution
+Navigate to `backend` directory and build/run:
 ```bash
-cd "backend"
+cd backend
+mvn clean package -DskipTests
 mvn spring-boot:run
 ```
+The backend API will start on **`http://localhost:8080/api`**.
 
-Backend will start at: **http://localhost:8080**
-
----
-
-### 4. Run the Frontend
-
-Open the frontend with Live Server (VS Code extension) or any static file server:
-
-- **VS Code Live Server**: Right-click `frontend/index.html` → Open with Live Server
-- **Python**: `python -m http.server 5500` inside the `frontend/` folder
-- **Direct file**: Open `frontend/index.html` in a browser (note: CORS may block API calls)
-
-Frontend runs at: **http://localhost:5500**
-
----
-
-## 🔐 Demo Accounts
-
-| Role    | Email                    | Password    |
-|---------|--------------------------|-------------|
-| Student | student@placify.com      | student123  |
-| Admin   | admin@placify.com        | admin123    |
-
----
-
-## 📁 Project Structure
-
+### 3. Frontend Execution
+Serve the `frontend` folder using any local HTTP server (VS Code Live Server, python http.server, etc.):
+```bash
+# Example using Python http.server
+cd frontend
+python -m http.server 5500
 ```
-Job identifier/
-├── backend/                          # Spring Boot Backend
-│   ├── pom.xml
-│   └── src/main/java/com/placify/
-│       ├── config/                   # Security, CORS, DataInitializer
-│       ├── controller/               # REST API controllers
-│       ├── dto/                      # Request/Response DTOs
-│       ├── exception/                # Global exception handling
-│       ├── model/                    # JPA entities
-│       ├── repository/               # Spring Data JPA repos
-│       └── service/                  # Business logic
-├── frontend/                         # Vanilla JS Frontend
-│   ├── index.html                    # Landing page
-│   ├── css/styles.css                # Design system
-│   ├── js/api.js                     # API client
-│   ├── js/utils.js                   # Shared utilities
-│   └── pages/
-│       ├── login.html
-│       ├── register.html
-│       ├── dashboard.html            # Student dashboard
-│       ├── upload.html               # Resume upload
-│       ├── analysis.html             # Skill gap analysis
-│       └── admin.html                # Admin panel
-└── database/
-    └── schema.sql                    # PostgreSQL schema reference
-```
+Open **`http://localhost:5500`** in your browser.
 
 ---
 
-## 🌐 REST API Reference
+## 🌐 Production Deployment
 
-| Method | Endpoint              | Description              | Auth         |
-|--------|-----------------------|--------------------------|--------------|
-| POST   | /api/auth/register    | Student registration     | Public       |
-| POST   | /api/auth/login       | Login                    | Public       |
-| POST   | /api/auth/logout      | Logout                   | Authenticated|
-| GET    | /api/auth/me          | Current user info        | Authenticated|
-| POST   | /api/resume/upload    | Upload PDF resume        | Student      |
-| GET    | /api/resume/latest    | Get latest resume        | Student      |
-| GET    | /api/resume/{id}      | Get resume by ID         | Student      |
-| GET    | /api/roles            | List job roles           | Authenticated|
-| POST   | /api/roles            | Create job role          | Admin        |
-| PUT    | /api/roles/{id}       | Update job role          | Admin        |
-| DELETE | /api/roles/{id}       | Delete job role          | Admin        |
-| POST   | /api/analyze          | Run skill gap analysis   | Student      |
-| GET    | /api/report/{id}      | Get analysis report      | Authenticated|
-| GET    | /api/reports          | Get my reports           | Student      |
-| GET    | /api/dashboard/student| Student dashboard data   | Student      |
-| GET    | /api/dashboard/admin  | Admin dashboard data     | Admin        |
+Refer to [docs/deployment_guide.md](file:///docs/deployment_guide.md) for step-by-step instructions on:
+1. Provisioning PostgreSQL on **Neon**.
+2. Deploying Java backend to **Render**.
+3. Deploying static frontend to **Vercel**.
 
 ---
 
-## ✨ Features
+## 🔒 Security Features
 
-- **Resume Upload**: Drag-and-drop PDF upload with PDFBox text extraction
-- **Skill Detection**: Rule-based parser with 29+ skills and alias matching
-- **Skill Gap Analysis**: Match score formula: `(Matched / Total Required) × 100`
-- **Learning Roadmap**: Personalized improvement plan with curated resource links
-- **6 Job Roles**: Java Backend, Full Stack, Software Engineer, QA, Frontend, DevOps
-- **Admin Panel**: Manage job roles with full CRUD and platform statistics
-- **Student Dashboard**: Resume, detected skills, past reports, and average match score
+- **Path Traversal Protection**: Uploaded files are sanitized and validated to prevent directory traversal attacks (`../`).
+- **File Validation**: Strict PDF MIME type check and 5MB size limit.
+- **BCrypt Hashing**: Password storage secured using Spring Security BCrypt encoder.
+- **Externalized JWT**: Secret key externalized to environment properties.
+- **Sanitized Error Responses**: Internal stack traces are suppressed in production mode (`server.error.include-stacktrace=never`).
 
 ---
 
-## 🔮 Future Enhancements
+## ❓ Troubleshooting & Common Issues
 
-- JWT-based stateless authentication
-- NLP-based semantic skill extraction
-- ATS resume scoring
-- Company-specific role matching
-- Email report delivery
-- Cloud deployment (AWS/GCP)
+1. **CORS Errors**:
+   Ensure `ALLOWED_ORIGINS` on the backend matches your exact frontend URL (including port and protocol).
+2. **Database Connection Failure**:
+   Check PostgreSQL service status (`pg_isready`) and verify credentials in `application-local.properties` or environment variables.
+3. **File Upload Errors**:
+   Verify that `UPLOAD_PATH` directory has write permissions.
+
+---
+
+© 2026 Placify. Enterprise Placement Analytics.
